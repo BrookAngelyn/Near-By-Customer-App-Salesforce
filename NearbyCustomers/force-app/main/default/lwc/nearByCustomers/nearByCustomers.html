@@ -1,0 +1,343 @@
+<template>
+    <div class="main-container">
+        <!-- Header Section -->
+        <div class="header-section">
+            <div class="header-content">
+                <div class="header-icon">
+                    <lightning-icon icon-name="standard:location" size="medium"></lightning-icon>
+                </div>
+                <div class="header-text">
+                    <h1 class="header-title">Nearby Customers</h1>
+                    <p class="header-subtitle">Find and explore customers in your area</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Location Configuration Card -->
+        <div class="config-card">
+            <div class="card-header">
+                <lightning-icon icon-name="utility:location" size="small" class="card-header-icon"></lightning-icon>
+                <h2 class="card-title">Location Settings</h2>
+            </div>
+            
+            <div class="card-content">
+                <!-- Location Method Toggle -->
+                <div class="toggle-section">
+                    <lightning-input
+                        type="toggle"
+                        label="Use Current Location"
+                        name="useCurrentLocation"
+                        checked={useCurrentLocation}
+                        onchange={handleUseCurrentLocationToggle}
+                        class="location-toggle">
+                    </lightning-input>
+                </div>
+
+                <!-- Manual Location Inputs -->
+                <template if:false={useCurrentLocation}>
+                    <div class="coordinates-section">
+                        <div class="coordinates-grid">
+                            <div class="coordinate-input">
+                                <lightning-input
+                                    type="number"
+                                    name="latitude"
+                                    label="Latitude"
+                                    value={latitudeInputValue}
+                                    onchange={handleLatitudeChange}
+                                    step="any"
+                                    min="-90"
+                                    max="90"
+                                    placeholder="Enter latitude (-90 to 90)"
+                                    required
+                                    class="coordinate-field">
+                                </lightning-input>
+                            </div>
+                            <div class="coordinate-input">
+                                <lightning-input
+                                    type="number"
+                                    name="longitude"
+                                    label="Longitude"
+                                    value={longitudeInputValue}
+                                    onchange={handleLongitudeChange}
+                                    step="any"
+                                    min="-180"
+                                    max="180"
+                                    placeholder="Enter longitude (-180 to 180)"
+                                    required
+                                    class="coordinate-field">
+                                </lightning-input>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Current Location Toggle with Refresh Button -->
+                <!-- <template if:true={useCurrentLocation}>
+                    <div class="coordinates-section">
+                        <div class="coordinates-grid">
+                            <div class="refresh-button-container" style="grid-column: 1 / -1; justify-content: center;">
+                                <lightning-button
+                                    label="Get Current Location"
+                                    icon-name="utility:refresh"
+                                    onclick={handleRefreshLocation}
+                                    title="Get Current Location"
+                                    variant="brand"
+                                    disabled={isLoading}
+                                    class="refresh-location-btn">
+                                </lightning-button>
+                            </div>
+                        </div>
+                    </div>
+                </template> -->
+                
+                <!-- Current Location Display -->
+                <template if:true={hasLocation}>
+                    <div class="location-display">
+                        <div class="location-status">
+                            <div class="status-icon">
+                                <lightning-icon 
+                                    icon-name="utility:success" 
+                                    size="x-small">
+                                </lightning-icon>
+                            </div>
+                            <div class="status-content">
+                                <h3 class="status-title">Current Location</h3>
+                                <div class="coordinates-display">
+                                    <div class="coordinate-chip">
+                                        <span class="chip-label">LATITUDE</span>
+                                        <span class="chip-value">{latitude}</span>
+                                    </div>
+                                    <div class="coordinate-chip">
+                                        <span class="chip-label">LONGITUDE</span>
+                                        <span class="chip-value">{longitude}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Search Configuration -->
+                <div class="search-config">
+                    <div class="search-inputs">
+                        <div class="radius-input">
+                            <lightning-input 
+                                type="number"
+                                label="Search Radius (km)"
+                                value={radiusKm}
+                                onchange={handleRadiusChange}
+                                min="1"
+                                max="100"
+                                step="1"
+                                class="radius-field">
+                            </lightning-input>
+                        </div>
+                        <div class="search-button-container">
+                            <lightning-button 
+                                label={searchButtonLabel}
+                                onclick={handleSearchClick}
+                                variant="brand"
+                                disabled={isSearchDisabled}
+                                class="search-btn">
+                            </lightning-button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Customer Search and Results -->
+        <template if:true={allCustomers.length}>
+            <div class="results-card">
+                <div class="card-header">
+                    <lightning-icon icon-name="standard:account" size="small" class="card-header-icon"></lightning-icon>
+                    <h2 class="card-title">Customer Results</h2>
+                    <div class="results-count">
+                        <span class="count-badge">{customerCountDisplay}</span>
+                    </div>
+                </div>
+
+                <div class="card-content">
+                    <!-- Search Field -->
+                    <div class="search-section">
+                        <lightning-input
+                            type="search"
+                            label="Search Customers"
+                            placeholder="Enter customer name..."
+                            value={searchTerm}
+                            onchange={handleCustomerSearch}
+                            class="customer-search">
+                        </lightning-input>
+                    </div>
+
+                    <!-- View Toggle -->
+                    <template if:true={hasCustomers}>
+                        <div class="view-controls">
+                            <lightning-button-group>
+                                <lightning-button 
+                                    label="Map View"
+                                    onclick={showMapView}
+                                    variant={mapViewVariant}
+                                    icon-name="utility:world"
+                                    class="view-btn">
+                                </lightning-button>
+                                <lightning-button 
+                                    label="Table View"
+                                    onclick={showTableView}
+                                    variant={tableViewVariant}
+                                    icon-name="utility:table"
+                                    class="view-btn">
+                                </lightning-button>
+                            </lightning-button-group>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </template>
+
+        <!-- Loading States -->
+        <template if:true={isLoading}>
+            <div class="loading-container">
+                <div class="loading-card">
+                    <lightning-spinner 
+                        alternative-text="Getting location..." 
+                        size="medium">
+                    </lightning-spinner>
+                    <p class="loading-text">Getting your location...</p>
+                </div>
+            </div>
+        </template>
+
+        <template if:true={isSearching}>
+            <div class="loading-container">
+                <div class="loading-card">
+                    <lightning-spinner 
+                        alternative-text="Searching for customers..." 
+                        size="medium">
+                    </lightning-spinner>
+                    <p class="loading-text">Searching for nearby customers...</p>
+                </div>
+            </div>
+        </template>
+
+        <!-- Error Message -->
+        <template if:true={error}>
+            <div class="error-container">
+                <div class="error-card">
+                    <div class="error-icon">
+                        <lightning-icon icon-name="utility:error" size="x-small"></lightning-icon>
+                    </div>
+                    <div class="error-content">
+                        <h3 class="error-title">Something went wrong</h3>
+                        <p class="error-message">{error.body.message}</p>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+        <!-- Map View -->
+        <template if:true={showMap}>
+            <template if:true={hasCustomers}>
+                <div class="map-container">
+                    <div class="map-header">
+                        <h3 class="map-title">Map View</h3>
+                        <div class="map-info">
+                            <span class="info-badge">{customerCountDisplay}</span>
+                        </div>
+                    </div>
+                    <div class="map-wrapper">
+                        <lightning-map
+                            map-markers={mapMarkers}
+                            markers-title="Customer Locations"
+                            zoom-level="12"
+                            center={mapCenter}
+                            show-footer="true">
+                        </lightning-map>
+                    </div>
+                </div>
+            </template>
+        </template>
+
+        <!-- Table View -->
+        <template if:true={showTable}>
+            <template if:true={hasCustomers}>
+                <div class="table-container">
+                    <div class="table-header">
+                        <h3 class="table-title">Table View</h3>
+                        <div class="table-info">
+                            <span class="info-badge">{customerCountDisplay}</span>
+                        </div>
+                    </div>
+                    <div class="table-wrapper">
+                        <lightning-datatable
+                            key-field="Id"
+                            data={filteredCustomers}
+                            columns={columns}
+                            show-row-number-column
+                            resize-column-disabled
+                            hide-checkbox-column>
+                        </lightning-datatable>
+                    </div>
+                </div>
+            </template>
+        </template>
+
+        <!-- No Results States -->
+        <template if:true={showNoResults}>
+            <div class="no-results-container">
+                <div class="no-results-card">
+                    <div class="no-results-icon">
+                        <lightning-icon icon-name="utility:info" size="large"></lightning-icon>
+                    </div>
+                    <h3 class="no-results-title">No customers found</h3>
+                    <p class="no-results-message">No customers found in the specified radius. Try increasing your search radius.</p>
+                </div>
+            </div>
+        </template>
+
+        <!-- No Search Results -->
+        <template if:true={allCustomers.length}>
+            <template if:true={searchTerm}>
+                <template if:false={filteredCustomers.length}>
+                    <div class="no-search-results-container">
+                        <div class="no-search-results-card">
+                            <div class="no-search-icon">
+                                <lightning-icon icon-name="utility:search" size="large"></lightning-icon>
+                            </div>
+                            <h3 class="no-search-title">No matches found</h3>
+                            <p class="no-search-message">No customers found matching "{searchTerm}". Try adjusting your search term.</p>
+                            <!-- <lightning-button 
+                                label="Clear Search" 
+                                onclick={clearSearch}
+                                variant="brand-outline"
+                                class="clear-search-btn">
+                            </lightning-button> -->
+                        </div>
+                    </div>
+                </template>
+            </template>
+        </template>
+
+        <!-- Initial State -->
+        <template if:false={hasSearched}>
+            <template if:false={isLoading}>
+                <template if:false={isSearching}>
+                    <template if:false={allCustomers.length}>
+                        <div class="initial-state-container">
+                            <div class="initial-state-card">
+                                <div class="initial-state-icon">
+                                    <lightning-icon 
+                                        icon-name="utility:location" 
+                                        size="large">
+                                    </lightning-icon>
+                                </div>
+                                <h3 class="initial-state-title">Ready to search</h3>
+                                <p class="initial-state-message">Configure your location settings and click 'Search Nearby Customers' to find customers in your area.</p>
+                            </div>
+                        </div>
+                    </template>
+                </template>
+            </template>
+        </template>
+    </div>
+</template>
